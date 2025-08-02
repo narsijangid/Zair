@@ -23,23 +23,36 @@ const firebaseConfig = {
         let isMuted = false;
         let waitingForPartner = false;
 
-        // WebRTC configuration
-        // WebRTC configuration with enhanced STUN servers
+        // WebRTC configuration with enhanced STUN and TURN servers
         const servers = {
             iceServers: [
+                // Google STUN servers
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:stun3.l.google.com:19302' },
                 { urls: 'stun:stun4.l.google.com:19302' },
+                
+                // Additional STUN servers
                 { urls: 'stun:stun01.sipphone.com' },
                 { urls: 'stun:stun.ekiga.net' },
                 { urls: 'stun:stun.fwdnet.net' },
                 { urls: 'stun:stun.ideasip.com' },
                 { urls: 'stun:stun.iptel.org' },
                 { urls: 'stun:stun.rixtelecom.se' },
-                { urls: 'stun:stun.schlund.de' }
-            ]
+                { urls: 'stun:stun.schlund.de' },
+                
+                // TURN servers for NAT traversal
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+                
+                // Additional TURN servers
+                { urls: 'turn:numb.viagenie.ca', username: 'webrtc@live.com', credential: 'muazkh' },
+                { urls: 'turn:turn.bistri.com:80', username: 'homeo', credential: 'homeo' },
+                { urls: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' }
+            ],
+            iceCandidatePoolSize: 10
         };
 
         // DOM elements (update for new structure)
@@ -263,40 +276,92 @@ const firebaseConfig = {
                     }
                 };
 
-                // Enhanced ICE candidate handling
+                // Enhanced ICE candidate handling with diagnostics
                 peerConnection.onicecandidate = event => {
                     if (event.candidate && currentPartnerId) {
                         console.log('Sending ICE candidate to:', currentPartnerId);
+                        console.log('ICE candidate type:', event.candidate.type);
+                        console.log('ICE candidate protocol:', event.candidate.protocol);
+                        console.log('ICE candidate address:', event.candidate.address);
                         database.ref(`calls/${currentPartnerId}/candidates`).push(event.candidate.toJSON())
                             .catch(err => console.error('Error sending candidate:', err));
                     }
                 };
 
-                // Add connection state monitoring
+                // Enhanced connection state monitoring
                 peerConnection.onconnectionstatechange = () => {
                     console.log('Connection state:', peerConnection.connectionState);
-                    if (peerConnection.connectionState === 'connected') {
-                        addMessage('🎉 Peer connection established successfully!');
+                    switch (peerConnection.connectionState) {
+                        case 'connected':
+                            addMessage('🎉 Peer connection established successfully!');
+                            break;
+                        case 'connecting':
+                            addMessage('🔗 Establishing connection...');
+                            break;
+                        case 'failed':
+                            addMessage('❌ Connection failed. This might be due to network restrictions or firewall settings. Try using mobile data.');
+                            console.error('Connection failed - check TURN server configuration');
+                            break;
+                        case 'disconnected':
+                            addMessage('⚠️ Connection disconnected');
+                            break;
+                        case 'closed':
+                            addMessage('🔌 Connection closed');
+                            break;
                     }
                 };
 
                 peerConnection.oniceconnectionstatechange = () => {
                     console.log('ICE connection state:', peerConnection.iceConnectionState);
-                    if (peerConnection.iceConnectionState === 'connected') {
-                        addMessage('🔄 ICE negotiation completed');
-                    } else if (peerConnection.iceConnectionState === 'failed') {
-                        addMessage('❌ ICE connection failed - trying to reconnect...');
-                        // Attempt to restart ICE
-                        if (peerConnection.restartIce) {
-                            peerConnection.restartIce();
-                        }
+                    switch (peerConnection.iceConnectionState) {
+                        case 'connected':
+                            addMessage('🔄 ICE negotiation completed');
+                            break;
+                        case 'checking':
+                            addMessage('🔍 Checking network connection...');
+                            break;
+                        case 'failed':
+                            addMessage('❌ Network connection failed. Please check your internet connection or try using mobile data.');
+                            console.error('ICE connection failed - TURN servers may be needed');
+                            // Attempt to restart ICE
+                            if (peerConnection.restartIce) {
+                                peerConnection.restartIce();
+                            }
+                            break;
+                        case 'disconnected':
+                            addMessage('⚠️ Network connection lost');
+                            break;
+                        case 'closed':
+                            addMessage('🔌 ICE connection closed');
+                            break;
+                        case 'completed':
+                            console.log('ICE negotiation completed');
+                            break;
                     }
+                };
+
+                // Handle ICE gathering state changes
+                peerConnection.onicegatheringstatechange = () => {
+                    console.log('ICE gathering state:', peerConnection.iceGatheringState);
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        console.log('ICE gathering complete');
+                    }
+                };
+
+                // Handle signaling state changes
+                peerConnection.onsignalingstatechange = () => {
+                    console.log('Signaling state:', peerConnection.signalingState);
+                };
+
+                // Handle negotiation needed
+                peerConnection.onnegotiationneeded = () => {
+                    console.log('Negotiation needed');
                 };
 
                 return peerConnection;
             } catch (error) {
                 console.error('Error creating peer connection:', error);
-                addMessage('Error establishing connection. Please try again.');
+                addMessage('Error establishing connection. Please check your camera permissions and internet connection.');
                 throw error;
             }
         }
@@ -310,7 +375,18 @@ const firebaseConfig = {
             skipBtn.disabled = true;
             addMessage('🔍 Searching for a stranger to chat with...');
 
+            // Set connection timeout (30 seconds)
+            const connectionTimeout = setTimeout(() => {
+                if (waitingForPartner) {
+                    addMessage('⏰ Connection timeout. Please try again.');
+                    resetConnection();
+                }
+            }, 30000);
+
             try {
+                // Clean up any existing connections first
+                await cleanupExistingConnections();
+                
                 // Look for available users
                 const snapshot = await database.ref('waitingUsers').once('value');
                 const waitingUsers = snapshot.val();
@@ -331,6 +407,7 @@ const firebaseConfig = {
                         
                         // Start call as initiator
                         await initiateCall(partnerId);
+                        clearTimeout(connectionTimeout);
                         return;
                     }
                 }
@@ -343,20 +420,43 @@ const firebaseConfig = {
                 
                 // Listen for someone to connect with us
                 const callRef = database.ref(`calls/${currentUserId}`);
-                callRef.on('value', async (snapshot) => {
+                const callListener = callRef.on('value', async (snapshot) => {
                     const callData = snapshot.val();
                     if (callData && callData.offer && !peerConnection && !isUserBlocked(callData.from)) {
                         currentPartnerId = callData.from;
                         await answerCall(callData);
-                        callRef.off();
+                        callRef.off('value', callListener);
+                        clearTimeout(connectionTimeout);
                     }
                 });
                 
+                // Store listener reference for cleanup
+                window.currentCallListener = callListener;
+                
             } catch (error) {
                 console.error('Error finding stranger:', error);
+                clearTimeout(connectionTimeout);
                 updateStatus('Error connecting. Try again.', 'disconnected');
                 connectBtn.disabled = false;
                 waitingForPartner = false;
+            }
+        }
+
+        async function cleanupExistingConnections() {
+            try {
+                // Remove from waiting users
+                await database.ref(`waitingUsers/${currentUserId}`).remove();
+                
+                // Remove from calls
+                await database.ref(`calls/${currentUserId}`).remove();
+                
+                // Clean up any existing listeners
+                if (window.currentCallListener) {
+                    database.ref(`calls/${currentUserId}`).off('value', window.currentCallListener);
+                    window.currentCallListener = null;
+                }
+            } catch (error) {
+                console.error('Error cleaning up connections:', error);
             }
         }
 
@@ -524,31 +624,71 @@ const firebaseConfig = {
             resetConnection();
         }
 
-        function resetConnection() {
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
+        async function resetConnection() {
+            try {
+                // Clean up existing listeners
+                if (window.currentCallListener) {
+                    database.ref(`calls/${currentUserId}`).off('value', window.currentCallListener);
+                    window.currentCallListener = null;
+                }
+                
+                // Close peer connection
+                if (peerConnection) {
+                    console.log('Closing peer connection...');
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+
+                // Reset video elements
+                remoteVideo.srcObject = null;
+                remoteVideo.style.display = 'none';
+                videoPlaceholder.style.display = 'block';
+                videoPlaceholder.textContent = isVideoStarted ? '📹 Find a stranger to chat' : '📹 Click "Start Video" to begin';
+
+                // Cleanup Firebase
+                await cleanupFirebaseConnections();
+                
+                // Reset state variables
+                currentPartnerId = null;
+                waitingForPartner = false;
+                
+                // Hide user actions button
+                toggleUserActions(false);
+                
+                updateStatus(
+                    isVideoStarted ? 'Ready to find stranger' : 'Start video first', 
+                    isVideoStarted ? 'connected' : 'disconnected'
+                );
+                connectBtn.disabled = !isVideoStarted;
+                skipBtn.disabled = true;
+                
+                console.log('Connection reset complete');
+                
+            } catch (error) {
+                console.error('Error during connection reset:', error);
             }
-            
-            remoteVideo.srcObject = null;
-            remoteVideo.style.display = 'none';
-            videoPlaceholder.style.display = 'block';
-            videoPlaceholder.textContent = isVideoStarted ? '📹 Find a stranger to chat' : '📹 Click "Start Video" to begin';
-            
-            if (currentPartnerId) {
-                database.ref(`calls/${currentUserId}`).remove();
-                database.ref(`calls/${currentPartnerId}`).off();
+        }
+
+        async function cleanupFirebaseConnections() {
+            try {
+                // Remove from waiting users
+                await database.ref(`waitingUsers/${currentUserId}`).remove();
+                
+                // Remove from calls
+                await database.ref(`calls/${currentUserId}`).remove();
+                
+                // Remove candidates
+                await database.ref(`calls/${currentUserId}/candidates`).remove();
+                
+                // Clean up partner listeners
+                if (currentPartnerId) {
+                    database.ref(`calls/${currentPartnerId}`).off();
+                }
+                
+                console.log('Firebase connections cleaned up');
+            } catch (error) {
+                console.error('Error cleaning up Firebase:', error);
             }
-            
-            currentPartnerId = null;
-            waitingForPartner = false;
-            
-            // Hide user actions button
-            toggleUserActions(false);
-            
-            updateStatus(isVideoStarted ? 'Ready to find stranger' : 'Start video first', isVideoStarted ? 'connected' : 'disconnected');
-            connectBtn.disabled = !isVideoStarted;
-            skipBtn.disabled = true;
         }
 
         async function skipUser() {

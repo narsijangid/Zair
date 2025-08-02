@@ -28,12 +28,36 @@ let isVideoStarted = false;
 let isMuted = false;
 let waitingForPartner = false;
 
-// WebRTC configuration
+// WebRTC configuration with enhanced STUN and TURN servers
 const servers = {
     iceServers: [
+        // Google STUN servers
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-    ]
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        
+        // Additional STUN servers
+        { urls: 'stun:stun01.sipphone.com' },
+        { urls: 'stun:stun.ekiga.net' },
+        { urls: 'stun:stun.fwdnet.net' },
+        { urls: 'stun:stun.ideasip.com' },
+        { urls: 'stun:stun.iptel.org' },
+        { urls: 'stun:stun.rixtelecom.se' },
+        { urls: 'stun:stun.schlund.de' },
+        
+        // TURN servers for NAT traversal
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+        
+        // Additional TURN servers
+        { urls: 'turn:numb.viagenie.ca', username: 'webrtc@live.com', credential: 'muazkh' },
+        { urls: 'turn:turn.bistri.com:80', username: 'homeo', credential: 'homeo' },
+        { urls: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' }
+    ],
+    iceCandidatePoolSize: 10
 };
 
 // DOM Elements - will be initialized in DOMContentLoaded
