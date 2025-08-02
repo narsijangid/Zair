@@ -254,25 +254,57 @@ const firebaseConfig = {
             try {
                 peerConnection = new RTCPeerConnection(servers);
 
-                // Add local stream with better error handling
+                // Add local stream with better error handling and track negotiation
                 if (localStream) {
+                    console.log('Adding local tracks to peer connection:', {
+                        videoTracks: localStream.getVideoTracks().length,
+                        audioTracks: localStream.getAudioTracks().length
+                    });
+                    
                     localStream.getTracks().forEach(track => {
                         try {
-                            peerConnection.addTrack(track, localStream);
+                            const sender = peerConnection.addTrack(track, localStream);
+                            console.log('Added track:', track.kind, 'track ID:', track.id);
                         } catch (trackError) {
                             console.error('Error adding track:', trackError);
                         }
                     });
+                } else {
+                    console.warn('No local stream available when creating peer connection');
                 }
 
                 // Handle remote stream with enhanced logging
                 peerConnection.ontrack = event => {
                     console.log('Remote stream received:', event.streams);
+                    console.log('Remote tracks:', event.track ? event.track.kind : 'No track info');
+                    
                     if (event.streams && event.streams[0]) {
                         remoteVideo.srcObject = event.streams[0];
                         remoteVideo.style.display = 'block';
                         videoPlaceholder.style.display = 'none';
-                        addMessage('📹 Video connection established!');
+                        
+                        // Ensure video plays and is visible
+                        remoteVideo.play().catch(e => {
+                            console.error('Error playing remote video:', e);
+                            addMessage('⚠️ Could not play remote video');
+                        });
+                        
+                        // Check if remote stream has video tracks
+                        const remoteStream = event.streams[0];
+                        const videoTracks = remoteStream.getVideoTracks();
+                        const audioTracks = remoteStream.getAudioTracks();
+                        
+                        console.log('Remote stream details:', {
+                            videoTracks: videoTracks.length,
+                            audioTracks: audioTracks.length,
+                            videoTrackSettings: videoTracks.length > 0 ? videoTracks[0].getSettings() : null
+                        });
+                        
+                        if (videoTracks.length > 0) {
+                            addMessage('📹 Video connection established!');
+                        } else {
+                            addMessage('🔊 Audio only - no video received');
+                        }
                     }
                 };
 
@@ -469,7 +501,7 @@ const firebaseConfig = {
                     throw new Error('Local stream not available');
                 }
                 
-                // Create offer with proper constraints
+                // Create offer with proper constraints for video negotiation
                 const offer = await peerConnection.createOffer({
                     offerToReceiveAudio: true,
                     offerToReceiveVideo: true
@@ -477,16 +509,18 @@ const firebaseConfig = {
                 
                 await peerConnection.setLocalDescription(offer);
                 
-                // Send offer to partner with additional metadata
+                // Send offer to partner with track information
                 await database.ref(`calls/${partnerId}`).set({
                     offer: offer,
                     from: currentUserId,
                     timestamp: Date.now(),
                     hasVideo: localStream.getVideoTracks().length > 0,
-                    hasAudio: localStream.getAudioTracks().length > 0
+                    hasAudio: localStream.getAudioTracks().length > 0,
+                    videoEnabled: videoBtn.classList.contains('active'),
+                    audioEnabled: micBtn.classList.contains('active')
                 });
                 
-                console.log('Offer sent to:', partnerId);
+                console.log('Offer sent to:', partnerId, 'with video:', localStream.getVideoTracks().length > 0);
                 
                 // Listen for answer with timeout handling
                 const answerRef = database.ref(`calls/${currentUserId}/answer`);
@@ -498,6 +532,11 @@ const firebaseConfig = {
                             answerRef.off('value', answerListener);
                             console.log('Answer received and processed');
                             onConnectionEstablished();
+            
+            // Force video track renegotiation after connection
+            setTimeout(() => {
+                renegotiateVideoTracks();
+            }, 2000);
                         } catch (error) {
                             console.error('Error processing answer:', error);
                             resetConnection();
@@ -582,25 +621,54 @@ const firebaseConfig = {
             skipBtn.disabled = false;
             waitingForPartner = false;
             
-            // Verify remote stream
-            if (remoteVideo.srcObject) {
-                const remoteStream = remoteVideo.srcObject;
-                const videoTracks = remoteStream.getVideoTracks();
-                const audioTracks = remoteStream.getAudioTracks();
-                
-                console.log('Remote stream details:', {
-                    videoTracks: videoTracks.length,
-                    audioTracks: audioTracks.length,
-                    videoSettings: videoTracks.length > 0 ? videoTracks[0].getSettings() : null
-                });
-                
-                if (videoTracks.length === 0) {
-                    addMessage('⚠️ No video received - check camera permissions on both devices');
+            // Force remote video to show and play
+            setTimeout(() => {
+                if (remoteVideo.srcObject) {
+                    const remoteStream = remoteVideo.srcObject;
+                    const videoTracks = remoteStream.getVideoTracks();
+                    const audioTracks = remoteStream.getAudioTracks();
+                    
+                    console.log('Remote stream details:', {
+                        videoTracks: videoTracks.length,
+                        audioTracks: audioTracks.length,
+                        videoSettings: videoTracks.length > 0 ? videoTracks[0].getSettings() : null
+                    });
+                    
+                    // Ensure video is visible and playing
+                    remoteVideo.style.display = 'block';
+                    remoteVideo.play().catch(e => {
+                        console.error('Error auto-playing remote video:', e);
+                        // Try to force play
+                        remoteVideo.muted = true;
+                        remoteVideo.play();
+                    });
+                    
+                    if (videoTracks.length > 0) {
+                        addMessage('📹 Video connection established!');
+                    } else {
+                        addMessage('🔊 Audio only - no video received');
+                        // Try to force video track negotiation
+                        setTimeout(() => {
+                            if (localStream && localStream.getVideoTracks().length > 0) {
+                                const videoTrack = localStream.getVideoTracks()[0];
+                                const sender = peerConnection.getSenders().find(s => 
+                                    s.track && s.track.kind === 'video'
+                                );
+                                if (sender) {
+                                    sender.replaceTrack(videoTrack).catch(console.error);
+                                }
+                            }
+                        }, 3000);
+                    }
+                    
+                    if (audioTracks.length === 0) {
+                        addMessage('⚠️ No audio received - check microphone permissions');
+                    }
+                } else {
+                    console.warn('No remote stream available in onConnectionEstablished');
+                    addMessage('🔗 Connected but waiting for video...');
                 }
-                if (audioTracks.length === 0) {
-                    addMessage('⚠️ No audio received - check microphone permissions');
-                }
-            }
+            }, 1000);
             
             // Show user actions button
             toggleUserActions(true);
