@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zair - Find Your Perfect Match</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Profile Sidebar -->
+    <div class="profile-sidebar" id="profileSidebar">
+        <div class="sidebar-header">
+            <button class="close-sidebar" onclick="toggleProfileSidebar()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="profile-content">
+            <div class="profile-avatar">
+                <img id="profileImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjUwIiBmaWxsPSIjRkY2QjgxIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J2TkDwvdGV4dD4KPC9zdmc+" alt="Profile">
+                <div class="avatar-overlay">
+                    <i class="fas fa-camera"></i>
+                </div>
+            </div>
+            
+            <div class="profile-info">
+                <h3 id="profileName">User Name</h3>
+                <p id="profileEmail">user@example.com</p>
+                <span class="profile-age" id="profileAge">25 years</span>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-number" id="connectionsCount">0</span>
+                    <span class="stat-label">Connections</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="matchesCount">0</span>
+                    <span class="stat-label">Matches</span>
+                </div>
+            </div>
+            
+            <div class="profile-actions">
+                <button class="profile-btn" onclick="editProfile()">
+                    <i class="fas fa-edit"></i>
+                    Edit Profile
+                </button>
+                <button class="profile-btn logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleProfileSidebar()"></div>
+
+    <div class="mobile-container">
+        <div class="top-bar">
+            <button class="profile-toggle" onclick="toggleProfileSidebar()">
+                <i class="fas fa-user-circle"></i>
+            </button>
+            <span class="app-title">Zair</span>
+            <div class="top-bar-right">
+                <span class="user-count" id="userCount">👥 0 online</span>
+                <div class="chat-icon-wrapper" id="chatIconWrapper">
+                    <span class="chat-icon">💬</span>
+                    <span class="chat-badge" id="chatBadge" style="display:none;">1</span>
+                </div>
+                <div class="user-actions" id="userActions" style="display: none;">
+                    <button class="action-btn" id="actionBtn" title="User Actions">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="status-container">
+            <div class="status" id="status">Ready to connect</div>
+            <button class="action-menu-btn" id="actionMenuBtn" style="display: none;" title="User Actions">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+        </div>
+        <div class="video-section">
+            <div class="video-container">
+                <video id="remoteVideo"  poster="https://i.pinimg.com/originals/de/a9/87/dea98734608addc3f95378eae5e99e84.gif" autoplay playsinline style="display: none;"></video>
+                <video id="localVideo"  poster="https://i.pinimg.com/originals/de/a9/87/dea98734608addc3f95378eae5e99e84.gif" class="local-video" autoplay playsinline muted style="display: none;"></video>
+                <div class="video-placeholder" id="videoPlaceholder">
+                    📹 Tap below to start video
+                </div>
+            </div>
+        </div>
+        <div class="media-controls">
+            <button class="media-btn" id="micBtn" onclick="toggleMic()" title="Toggle Microphone" disabled>
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="media-btn" id="videoBtn" onclick="toggleVideo()" title="Toggle Camera" disabled>
+                <i class="fas fa-video"></i>
+            </button>
+              <button  id="stopBtn" onclick="stopVideo()" title="Stop" disabled>
+               <img style="height: 50px; width: 50px;" src="https://cdn3.iconfinder.com/data/icons/basicolor-essentials/24/036_phone_call_hang-512.png" alt="">
+            </button>
+        </div>
+        <div class="bottom-bar">
+            <button class="btn btn-3d btn-start" id="startBtn" onclick="startVideo()" title="Start Video">
+                START
+            </button>
+            <button class="btn btn-3d btn-connect" id="connectBtn" onclick="findStranger()" title="Find Stranger" disabled>
+                CONNECT
+            </button>
+            <button class="btn btn-3d btn-skip btn-warning" id="skipBtn" onclick="skipUser()" title="Skip" disabled>
+                SKIP
+            </button>
+          
+        </div>
+        <!-- Chat Overlay -->
+        <div class="chat-overlay" id="chatOverlay">
+            <div class="chat-header-bar">
+                <span class="chat-header-title">Chat</span>
+                <button class="chat-close-btn" id="closeChatBtn">×</button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-bar">
+                <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
+                <button onclick="sendMessage()">📨</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Modal -->
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Report User</h3>
+                <button class="modal-close" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select a reason for reporting this user:</p>
+                <div class="report-options">
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="sexual_content">
+                        <span>🚫 Sexual Content</span>
+                    </label>
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="inappropriate_language">
+                        <span>🤬 Inappropriate Language</span>
+                    </label>
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="harassment">
+                        <span>😡 Harassment or Bullying</span>
+                    </label>
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="fake_profile">
+                        <span>🎭 Fake Profile</span>
+                    </label>
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="spam">
+                        <span>📧 Spam or Scam</span>
+                    </label>
+                    <label class="report-option">
+                        <input type="radio" name="reportReason" value="other">
+                        <span>📝 Other</span>
+                    </label>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-secondary" onclick="blockUser()">Block Only</button>
+                    <button class="btn btn-danger" onclick="reportAndBlockUser()">Report & Block</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Profile</h3>
+                <button class="modal-close" onclick="closeEditProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="form-group">
+                        <label for="editUsername">Username</label>
+                        <input type="text" id="editUsername" maxlength="50" placeholder="Enter your username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editAge">Age</label>
+                        <input type="number" id="editAge" min="18" max="100" placeholder="Enter your age">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Profile Picture</label>
+                        <div class="image-upload-container">
+                            <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
+                            <div class="image-preview" id="imagePreview">
+                                <img id="previewImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9Ijc1IiBjeT0iNzUiIHI9Ijc1IiBmaWxsPSIjRkY2QjgxIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjUwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J2TkDwvdGV4dD4KPC9zdmc+" alt="Preview">
+                                <div class="image-overlay" onclick="document.getElementById('profileImageUpload').click()">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Change Photo</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditProfileModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+                    </div>
+                </form>
+                <div class="loading-spinner" id="profileLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Saving...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-storage-compat.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

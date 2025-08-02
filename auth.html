@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zair - Find Your Perfect Match</title>
+    <link rel="stylesheet" href="auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="logo-heart">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h1 class="app-title">Zair</h1>
+                <p class="app-subtitle">Find your perfect match ❤️</p>
+            </div>
+
+            <!-- Auth Forms Container -->
+            <div class="auth-forms-container">
+                <!-- Login Form -->
+                <div class="auth-form login-form active" id="loginForm">
+                    <h2>Welcome Back</h2>
+                    <p class="form-subtitle">Sign in to continue your love journey</p>
+                    
+                    <form id="loginFormElement">
+                        <div class="input-group">
+                            <label for="loginEmail">Email</label>
+                            <div class="input-field">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="loginPassword">Password</label>
+                            <div class="input-field">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                                <!-- <i class="fas fa-eye toggle-password" onclick="togglePassword('loginPassword')"></i> -->
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="auth-btn login-btn">
+                            <span>Sign In</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+
+                    <button type="button" class="auth-btn signup-main-btn" onclick="showSignupForm()">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Create Account</span>
+                    </button>
+
+                    <div class="divider">
+                        <span>or</span>
+                    </div>
+
+                    <button class="google-btn" onclick="signInWithGoogle()">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                        <span>Continue with Google</span>
+                    </button>
+
+                    <div class="auth-actions">
+                        <button class="signup-prompt-btn" onclick="showSignupForm()">
+                            <i class="fas fa-user-plus"></i>
+                            New to Zair? Sign Up Here
+                        </button>
+                    </div>
+                    <p class="auth-switch">
+                        Don't have an account? 
+                        <a href="#" onclick="showSignupForm()">Sign Up</a>
+                    </p>
+                </div>
+
+                <!-- Signup Form -->
+                <div class="auth-form signup-form" id="signupForm">
+                    <h2>Join Zair</h2>
+                    <p class="form-subtitle">Start your romantic journey today</p>
+                    
+                    <form id="signupFormElement">
+                        <div class="input-group">
+                            <label for="signupName">Full Name</label>
+                            <div class="input-field">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="signupName" placeholder="Enter your full name" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="signupEmail">Email</label>
+                            <div class="input-field">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="signupEmail" placeholder="Enter your email" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="signupAge">Age</label>
+                            <div class="input-field">
+                                <i class="fas fa-calendar-alt"></i>
+                                <input type="number" id="signupAge" placeholder="Enter your age" min="18" max="100" required>
+                            </div>
+                        </div>
+
+                        <div class="age-verification">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="ageVerification" required>
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    I confirm I am 18+ years old 
+                                    <span class="age-badge">🔞</span>
+                                </span>
+                            </label>
+                            <p class="age-note">Zair is exclusively for adults 18+ seeking meaningful connections</p>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="signupPassword">Password</label>
+                            <div class="input-field">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="signupPassword" placeholder="Create a strong password" required>
+                                <!-- <i class="fas fa-eye toggle-password" onclick="togglePassword('signupPassword')"></i> -->
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <div class="input-field">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
+                                <!-- <i class="fas fa-eye toggle-password" onclick="togglePassword('confirmPassword')"></i> -->
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="auth-btn signup-btn">
+                            <span>Create Account</span>
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </form>
+
+                    <button type="button" class="auth-btn login-main-btn" onclick="showLoginForm()">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Sign In</span>
+                    </button>
+
+                    <div class="divider">
+                        <span>or</span>
+                    </div>
+
+                    <button class="google-btn" onclick="signInWithGoogle()">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                        <span>Continue with Google</span>
+                    </button>
+
+                    <div class="auth-actions">
+                        <button class="login-prompt-btn" onclick="showLoginForm()">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Already have an account? Sign In Here
+                        </button>
+                    </div>
+                    <p class="auth-switch">
+                        Already have an account? 
+                        <a href="#" onclick="showLoginForm()">Sign In</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner">
+                    <div class="heart-spinner">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <p>Connecting hearts...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Background Hearts Animation -->
+        <div class="hearts-bg">
+            <div class="heart heart-1"><i class="fas fa-heart"></i></div>
+            <div class="heart heart-2"><i class="fas fa-heart"></i></div>
+            <div class="heart heart-3"><i class="fas fa-heart"></i></div>
+            <div class="heart heart-4"><i class="fas fa-heart"></i></div>
+            <div class="heart heart-5"><i class="fas fa-heart"></i></div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    
+    <script src="auth.js"></script>
+</body>
+</html>
