@@ -272,24 +272,40 @@ const firebaseConfig = {
                     }
                 };
 
-                // Add connection state monitoring
+                // Add robust connection state monitoring
                 peerConnection.onconnectionstatechange = () => {
                     console.log('Connection state:', peerConnection.connectionState);
                     if (peerConnection.connectionState === 'connected') {
-                        addMessage('🎉 Peer connection established successfully!');
+                        // Verify we actually have media streams before reporting success
+                        if (remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0) {
+                            addMessage('🎉 Peer connection established successfully!');
+                        } else {
+                            console.warn('Connection reported but no media tracks received');
+                            addMessage('⚠️ Connection established but no media received - trying to reconnect');
+                            if (peerConnection.restartIce) {
+                                peerConnection.restartIce();
+                            }
+                        }
                     }
                 };
 
                 peerConnection.oniceconnectionstatechange = () => {
                     console.log('ICE connection state:', peerConnection.iceConnectionState);
                     if (peerConnection.iceConnectionState === 'connected') {
-                        addMessage('🔄 ICE negotiation completed');
+                        // Only confirm ICE connection if we have tracks
+                        if (remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0) {
+                            addMessage('🔄 ICE negotiation completed');
+                        } else {
+                            console.warn('ICE connected but no media tracks received');
+                        }
                     } else if (peerConnection.iceConnectionState === 'failed') {
                         addMessage('❌ ICE connection failed - trying to reconnect...');
                         // Attempt to restart ICE
                         if (peerConnection.restartIce) {
                             peerConnection.restartIce();
                         }
+                    } else if (peerConnection.iceConnectionState === 'disconnected') {
+                        addMessage('⚠️ ICE connection unstable - attempting to recover');
                     }
                 };
 
@@ -476,14 +492,14 @@ const firebaseConfig = {
         }
 
         function onConnectionEstablished() {
-            updateStatus('Connected with stranger! 🎥', 'connected');
-            addMessage('🎉 Connected! Video and audio should now be working!');
-            connectBtn.disabled = true;
-            skipBtn.disabled = false;
-            waitingForPartner = false;
-            
-            // Verify remote stream
-            if (remoteVideo.srcObject) {
+            // Only confirm connection if we have actual media tracks
+            if (remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0) {
+                updateStatus('Connected with stranger! 🎥', 'connected');
+                addMessage('🎉 Connected! Video and audio should now be working!');
+                connectBtn.disabled = true;
+                skipBtn.disabled = false;
+                waitingForPartner = false;
+                
                 const remoteStream = remoteVideo.srcObject;
                 const videoTracks = remoteStream.getVideoTracks();
                 const audioTracks = remoteStream.getAudioTracks();
@@ -493,6 +509,13 @@ const firebaseConfig = {
                     audioTracks: audioTracks.length,
                     videoSettings: videoTracks.length > 0 ? videoTracks[0].getSettings() : null
                 });
+            } else {
+                console.warn('Connection reported but no media tracks received');
+                addMessage('⚠️ Connection unstable - attempting to reconnect');
+                if (peerConnection && peerConnection.restartIce) {
+                    peerConnection.restartIce();
+                }
+            }
                 
                 if (videoTracks.length === 0) {
                     addMessage('⚠️ No video received - check camera permissions on both devices');
@@ -516,7 +539,7 @@ const firebaseConfig = {
                     }
                 });
             }
-        }
+        
 
         function handlePartnerDisconnect() {
             addMessage('👋 Stranger disconnected');

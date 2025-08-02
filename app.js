@@ -28,22 +28,12 @@ let isVideoStarted = false;
 let isMuted = false;
 let waitingForPartner = false;
 
-// WebRTC configuration for production deployment
+// WebRTC configuration
 const servers = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        // Add TURN servers for better NAT traversal in production
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-    ],
-    iceCandidatePoolSize: 10,
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require'
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
 };
 
 // DOM Elements - will be initialized in DOMContentLoaded
@@ -398,29 +388,10 @@ async function startVideo() {
     try {
         updateStatus('Starting camera...', 'searching');
         
-        // Enhanced media constraints for production deployment
-        const constraints = {
-            video: {
-                width: { ideal: 640, max: 1280 },
-                height: { ideal: 480, max: 720 },
-                facingMode: 'user',
-                frameRate: { ideal: 30, max: 30 }
-            },
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 44100
-            }
-        };
-        
-        // Check if we're on HTTPS (required for production)
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-            addMessage('⚠️ HTTPS is required for video calling. Please use HTTPS.');
-            throw new Error('HTTPS required');
-        }
-        
-        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
 
         localVideo.srcObject = localStream;
         localVideo.style.display = 'block';
@@ -571,59 +542,24 @@ async function createPeerConnection() {
         });
     }
 
-    // Handle remote stream with enhanced debugging
+    // Handle remote stream
     peerConnection.ontrack = event => {
-        console.log('Remote track received:', event);
         if (event.streams && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
             remoteVideo.style.display = 'block';
-            remoteVideo.muted = false; // Ensure audio is not muted
-            remoteVideo.autoplay = true;
-            remoteVideo.playsinline = true;
-            
-            // Force play the remote video
-            remoteVideo.play().catch(error => {
-                console.error('Error playing remote video:', error);
-            });
-            
             videoPlaceholder.style.display = 'none';
             
             // Show partner info
             if (currentPartnerId) {
                 loadPartnerInfo(currentPartnerId);
             }
-            
-            console.log('Remote video stream set successfully');
-        } else {
-            console.warn('No streams received in ontrack event');
         }
     };
 
-    // Handle ICE candidates with enhanced debugging
+    // Handle ICE candidates
     peerConnection.onicecandidate = event => {
         if (event.candidate && currentPartnerId) {
-            console.log('Sending ICE candidate:', event.candidate);
             database.ref(`calls/${currentPartnerId}/candidates`).push(event.candidate.toJSON());
-        }
-    };
-    
-    // Handle connection state changes
-    peerConnection.onconnectionstatechange = () => {
-        console.log('Connection state:', peerConnection.connectionState);
-        if (peerConnection.connectionState === 'connected') {
-            console.log('WebRTC connection established');
-        } else if (peerConnection.connectionState === 'failed') {
-            console.error('WebRTC connection failed');
-            addMessage('❌ Connection failed. Please try again.');
-        }
-    };
-    
-    // Handle ICE connection state changes
-    peerConnection.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'disconnected') {
-            addMessage('🔌 Connection lost. Looking for new match...');
-            resetConnection();
         }
     };
 
@@ -1145,20 +1081,14 @@ function resetConnection() {
         peerConnection = null;
     }
     
-    // Properly cleanup remote video
-    if (remoteVideo) {
-        remoteVideo.srcObject = null;
-        remoteVideo.style.display = 'none';
-    }
-    
+    remoteVideo.srcObject = null;
+    remoteVideo.style.display = 'none';
     videoPlaceholder.style.display = 'block';
     videoPlaceholder.textContent = isVideoStarted ? '📹 Find a match to chat' : '📹 Click "Start Video" to begin';
     
-    // Clean up Firebase references
     if (currentPartnerId) {
         database.ref(`calls/${currentUserId}`).remove();
         database.ref(`calls/${currentPartnerId}`).off();
-        database.ref(`calls/${currentUserId}/messages`).off();
     }
     
     currentPartnerId = null;
@@ -1172,8 +1102,6 @@ function resetConnection() {
     updateStatus(isVideoStarted ? 'Ready to find match' : 'Start video first', isVideoStarted ? 'connected' : 'disconnected');
     connectBtn.disabled = !isVideoStarted;
     skipBtn.disabled = true;
-    
-    console.log('Connection reset complete');
 }
 
 // Report and Block Functions
